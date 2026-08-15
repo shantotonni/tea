@@ -109,6 +109,13 @@ class SettingsController extends Controller
             'og_title' => ['nullable|string|max:180', 'string'],
             'og_description' => ['nullable|string|max:300', 'string'],
             'og_image' => ['nullable|string|max:255', 'string'],
+            'site_name' => ['nullable|string|max:100', 'string'],
+            'logo' => ['nullable|string|max:255', 'string'],
+            'locality' => ['nullable|string|max:100', 'string'],
+            'business_phone' => ['nullable|string|max:50', 'string'],
+            'business_email' => ['nullable|email|max:180', 'string'],
+            'social_profiles' => ['nullable|string|max:1000', 'string'],
+            'google_site_verification' => ['nullable|string|max:255', 'string'],
         ],
         // "Signature Collection" section copy
         'collection' => [

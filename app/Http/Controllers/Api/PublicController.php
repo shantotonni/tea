@@ -321,6 +321,8 @@ class PublicController extends Controller
                 'author' => $p->author,
                 'role' => $p->role,
                 'date' => optional($p->published_at)->format('F j, Y'),
+                'published_at' => optional($p->published_at)->toDateString(),
+                'updated_at' => optional($p->updated_at)->toAtomString(),
                 'readTime' => $p->read_time,
                 'featured' => (bool) $p->is_featured,
             ]);
@@ -348,6 +350,8 @@ class PublicController extends Controller
                 'author' => $post->author,
                 'role' => $post->role,
                 'date' => optional($post->published_at)->format('F j, Y'),
+                'published_at' => optional($post->published_at)->toDateString(),
+                'updated_at' => optional($post->updated_at)->toAtomString(),
                 'readTime' => $post->read_time,
                 'featured' => (bool) $post->is_featured,
             ]
@@ -567,8 +571,8 @@ class PublicController extends Controller
         return response()->json(['data' => [
             'store' => [
                 'name' => $s['store']['name'] ?? 'Cha Kunjo',
-                'email' => $s['store']['email'] ?? 'hello@chakunjo.com',
-                'phone' => $s['store']['phone'] ?? '+880 1712-345678',
+                'email' => $s['store']['email'] ?? 'chakunjo@gmail.com',
+                'phone' => $s['store']['phone'] ?? '01313762119',
                 'currency' => $s['store']['currency'] ?? 'BDT — Bangladeshi Taka (৳)',
                 'currency_symbol' => str_contains($s['store']['currency'] ?? '', 'USD') ? '$' : '৳',
                 'address' => $s['store']['address'] ?? 'Sreemangal, Sylhet, Bangladesh',
@@ -1067,6 +1071,9 @@ Explain why in 2 engaging sentences. Mention product slugs in brackets [slug].";
             'weight' => $p->weight,
             'price' => $p->price,
             'oldPrice' => $p->old_price,
+            'stock' => (int) $p->stock,
+            'status' => $p->status,
+            'updated_at' => optional($p->updated_at)->toAtomString(),
             'isFeatured' => (bool) $p->is_featured,
             'inGiftBox' => (bool) $p->in_gift_box,
             'gallery' => $details['gallery'] ?? [],

@@ -9,7 +9,7 @@ const loading = ref(true)
 const busy = ref(false)
 const uploading = ref(false)
 const errors = ref({})
-const form = reactive({ title: '', description: '', keywords: '', og_title: '', og_description: '', og_image: '' })
+const form = reactive({ title: '', description: '', keywords: '', og_title: '', og_description: '', og_image: '', site_name: '', logo: '', locality: '', business_phone: '', business_email: '', social_profiles: '', google_site_verification: '' })
 
 async function load() {
     loading.value = true
@@ -32,6 +32,21 @@ async function handleOgImageUpload(e) {
         toast.success('Social share card image uploaded successfully!')
     } catch (err) {
         toast.error('Failed to upload share image. Ensure file is an image under 10MB.')
+    } finally {
+        uploading.value = false
+    }
+}
+
+async function handleLogoUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    uploading.value = true
+    try {
+        const url = await uploadFile(file)
+        form.logo = url
+        toast.success('Logo uploaded successfully!')
+    } catch (err) {
+        toast.error('Failed to upload logo. Ensure file is an image under 10MB.')
     } finally {
         uploading.value = false
     }
@@ -125,6 +140,78 @@ async function save() {
                     </div>
                 </div>
             </section>
+
+            <section class="card blk">
+                <header class="blk-head"><h3>Brand &amp; Business Info <em class="fmt-hint">powers Google's Organization / Knowledge panel</em></h3></header>
+                <div class="blk-body">
+                    <label class="field" :class="{ invalid: errors.site_name }">
+                        <span>Site / Brand Name</span>
+                        <input v-model="form.site_name" type="text" placeholder="Cha Kunjo" />
+                        <em v-if="errors.site_name" class="field-msg">{{ errors.site_name[0] }}</em>
+                    </label>
+                    <div class="two-col">
+                        <label class="field" :class="{ invalid: errors.business_email }">
+                            <span>Business Email</span>
+                            <input v-model="form.business_email" type="email" placeholder="chakunjo@gmail.com" />
+                            <em v-if="errors.business_email" class="field-msg">{{ errors.business_email[0] }}</em>
+                        </label>
+                        <label class="field" :class="{ invalid: errors.business_phone }">
+                            <span>Business Phone</span>
+                            <input v-model="form.business_phone" type="text" placeholder="01313762119" />
+                            <em v-if="errors.business_phone" class="field-msg">{{ errors.business_phone[0] }}</em>
+                        </label>
+                    </div>
+                    <label class="field" :class="{ invalid: errors.locality }">
+                        <span>Locality / City <em class="fmt-hint">for local search (e.g. Sreemangal)</em></span>
+                        <input v-model="form.locality" type="text" placeholder="Sreemangal" />
+                        <em v-if="errors.locality" class="field-msg">{{ errors.locality[0] }}</em>
+                    </label>
+                    <label class="field" :class="{ invalid: errors.social_profiles }">
+                        <span>Social Profile URLs <em class="fmt-hint">comma separated full links (Facebook, Instagram, YouTube…)</em></span>
+                        <textarea v-model="form.social_profiles" rows="2" placeholder="https://facebook.com/chakunjo, https://instagram.com/chakunjo" />
+                        <em v-if="errors.social_profiles" class="field-msg">{{ errors.social_profiles[0] }}</em>
+                    </label>
+
+                    <div class="upload-section-card">
+                        <label class="field" :class="{ invalid: errors.logo }">
+                            <span>Brand Logo <em class="fmt-hint">used in search / structured data</em></span>
+                            <div class="upload-controls">
+                                <label class="btn btn-primary file-btn">
+                                    <span>{{ uploading ? '⏳ Uploading…' : '📁 Choose Logo File' }}</span>
+                                    <input type="file" accept="image/*" @change="handleLogoUpload" />
+                                </label>
+                                <span class="or-text">or specify image path:</span>
+                                <input v-model="form.logo" type="text" placeholder="/images/logo.png" />
+                            </div>
+                            <em v-if="errors.logo" class="field-msg">{{ errors.logo[0] }}</em>
+                        </label>
+                        <div v-if="form.logo" class="og-preview-card">
+                            <span>Logo Preview:</span>
+                            <img :src="asset(form.logo)" alt="logo preview" style="max-width: 160px" />
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card blk">
+                <header class="blk-head"><h3>🔎 Google Search Console Verification</h3></header>
+                <div class="blk-body">
+                    <div class="gsc-help">
+                        <p><strong>How to verify your domain:</strong></p>
+                        <ol>
+                            <li>Go to <b>search.google.com/search-console</b> → Add property → URL prefix → <b>https://chakunjo.com</b></li>
+                            <li>Pick the <b>“HTML tag”</b> method. You'll see: <code>&lt;meta name="google-site-verification" content="<b>xxxx</b>" /&gt;</code></li>
+                            <li>Copy <b>only the token</b> (the <code>xxxx</code> part) and paste it below, then Save.</li>
+                            <li>Back in Search Console, click <b>Verify</b>.</li>
+                        </ol>
+                    </div>
+                    <label class="field" :class="{ invalid: errors.google_site_verification }">
+                        <span>Google Site Verification Token</span>
+                        <input v-model="form.google_site_verification" type="text" placeholder="aBcD1234... (token only, not the whole tag)" />
+                        <em v-if="errors.google_site_verification" class="field-msg">{{ errors.google_site_verification[0] }}</em>
+                    </label>
+                </div>
+            </section>
         </template>
     </div>
 </template>
@@ -135,6 +222,12 @@ async function save() {
 .blk-head h3 { margin: 0; font-size: 1.05rem; }
 .blk-body { padding: 1.2rem 1.4rem; display: grid; gap: 1.2rem; }
 .fmt-hint { font-weight: 400; font-style: normal; color: var(--muted); font-size: 0.78rem; margin-left: 0.3rem; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+@media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+.gsc-help { background: #f4f8f4; border: 1px solid #d9e6dc; border-radius: 12px; padding: 0.9rem 1.1rem; font-size: 0.85rem; color: var(--ink, #223028); }
+.gsc-help p { margin: 0 0 0.5rem; }
+.gsc-help ol { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.35rem; line-height: 1.5; }
+.gsc-help code { background: rgba(16,38,28,0.06); padding: 0.05rem 0.35rem; border-radius: 5px; font-size: 0.82em; }
 
 .upload-section-card {
   background: var(--cream, #f9f6f0);

@@ -1,2 +1,6 @@
+# backend.chakunjo.com is the API + admin host, not the public storefront.
+# Keep it out of the index, but let crawlers reach product images so they can
+# appear in Google Images (they are referenced from https://chakunjo.com).
 User-agent: *
-Disallow:
+Allow: /images/
+Disallow: /

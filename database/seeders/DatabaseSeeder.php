@@ -99,7 +99,7 @@ class DatabaseSeeder extends Seeder
         $store = [
             'name' => 'Cha Kunjo',
             'email' => 'chakunjo@gmail.com',
-            'phone' => '+880 1XXX-XXXXXX',
+            'phone' => '01313762119',
             'currency' => 'BDT — Bangladeshi Taka (৳)',
             'address' => 'Sreemangal, Moulvibazar, Sylhet',
             'description' => 'Premium single-origin tea from the misty hills of Sreemangal. Five years in the gardens, packed under our own name since 2021.',

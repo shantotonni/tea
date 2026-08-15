@@ -78,8 +78,8 @@ Route::post('customer/register', [CustomerAuthController::class, 'register']);
 Route::post('customer/login', [CustomerAuthController::class, 'login']);
 
 // checkout (guest allowed; links customer when token sent) — throttled against order spam
-Route::post('public/checkout', [CheckoutController::class, 'store'])->middleware('throttle:15,1');
-Route::post('public/promo/validate', [PromoCodeController::class, 'validateCode']);
+Route::post('public/checkout', [CheckoutController::class, 'store'])->middleware('throttle:6,1');
+Route::post('public/promo/validate', [PromoCodeController::class, 'validateCode'])->middleware('throttle:20,1');
 
 // signed-in customer area
 Route::middleware('auth:customer')->group(function () {
@@ -108,12 +108,26 @@ Route::middleware('auth:api')->group(function () {
         ]);
 
         $file = $request->file('image');
-        $name = time() . '_' . \Illuminate\Support\Str::random(6) . '.' . $file->getClientOriginalExtension();
+        $ext = strtolower($file->getClientOriginalExtension());
+        $name = time() . '_' . \Illuminate\Support\Str::random(6) . '.' . $ext;
         $targetDir = public_path('images/uploads');
         if (! file_exists($targetDir)) {
             mkdir($targetDir, 0755, true);
         }
         $file->move($targetDir, $name);
+
+        $savedPath = $targetDir . '/' . $name;
+        if (in_array($ext, ['jpg', 'jpeg', 'png']) && function_exists('imagewebp')) {
+            $webpPath = preg_replace('/\.(jpg|jpeg|png)$/i', '.webp', $savedPath);
+            $img = $ext === 'png' ? @imagecreatefrompng($savedPath) : @imagecreatefromjpeg($savedPath);
+            if ($img) {
+                imagepalettetotruecolor($img);
+                imagealphablending($img, true);
+                imagesavealpha($img, true);
+                imagewebp($img, $webpPath, 82);
+                imagedestroy($img);
+            }
+        }
 
         return response()->json([
             'url' => 'images/uploads/' . $name,

@@ -33,6 +33,10 @@ class SecurityHeaders
             $headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains';
         }
 
+        if (strtolower($request->getHost()) === 'backend.chakunjo.com') {
+            $headers['X-Robots-Tag'] = 'noindex, nofollow';
+        }
+
         foreach ($headers as $key => $value) {
             $response->headers->set($key, $value);
         }

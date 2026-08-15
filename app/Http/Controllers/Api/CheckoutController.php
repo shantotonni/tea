@@ -9,6 +9,7 @@ use App\Models\PromoCode;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -17,25 +18,63 @@ class CheckoutController extends Controller
     /**
      * POST /api/public/checkout — place an order.
      * Guest checkout allowed; links the customer when a valid token is sent.
-     * Prices, stock and shipping are ALL computed server-side — the client
+     * Prices, stock, discounts and shipping are ALL computed server-side — the client
      * cart is treated as untrusted input.
      */
     public function store(Request $request)
     {
+        // 1. Anti-Bot Honeypot Trap
+        if ($request->filled('website') || $request->filled('hp_trap') || $request->filled('company_url')) {
+            abort(422, 'Spam request detected.');
+        }
+
+        // 2. Strict Input Validation
         $data = $request->validate([
-            'items' => 'required|array|min:1',
-            'items.*.id' => 'required|string',          // product slug
+            'items' => 'required|array|min:1|max:25',
+            'items.*.id' => 'required|string|max:100',       // product slug
             'items.*.qty' => 'required|integer|min:1|max:99',
-            'name' => 'required|string|max:120',
-            'email' => 'required|email|max:150',
-            'phone' => 'required|string|max:40',
-            'address' => 'required|string|max:255',
-            'city' => 'required|string|max:80',
+            'name' => 'required|string|min:2|max:120',
+            'email' => 'required|email:filter|max:150',
+            'phone' => ['required', 'string', 'min:10', 'max:20', 'regex:/^[0-9+\s\-()]{10,20}$/'],
+            'address' => 'required|string|min:4|max:255',
+            'city' => 'required|string|min:2|max:80',
             'delivery_zone' => 'nullable|in:inside,outside',
             'payment_method' => 'nullable|string|max:40',
             'note' => 'nullable|string|max:500',
             'promo_code' => 'nullable|string|max:40',
+        ], [
+            'phone.regex' => 'Please provide a valid phone number (10–15 digits).',
+            'items.max' => 'You cannot order more than 25 different items in a single checkout.',
         ]);
+
+        // 3. Fast Duplicate Order Suppression (5-second window per IP + Email + Phone)
+        $ip = $request->ip();
+        $cleanEmail = Str::lower(trim($data['email']));
+        $digitsPhone = preg_replace('/[^0-9]/', '', $data['phone']);
+        $antiSpamLockKey = "ck_order_lock:" . md5("{$ip}:{$cleanEmail}:{$digitsPhone}");
+        if (Cache::has($antiSpamLockKey)) {
+            abort(429, 'Duplicate submission detected. Please wait a few seconds before placing another order.');
+        }
+
+        // Total order units sanity cap
+        $totalUnits = array_sum(array_column($data['items'], 'qty'));
+        if ($totalUnits > 200) {
+            abort(422, 'Total order item quantity exceeds maximum limit of 200 units.');
+        }
+
+        // 4. Thorough XSS & Script Tag Sanitization
+        $sanitize = function ($str) {
+            if ($str === null) return null;
+            // Strip script and iframe tags along with inner content
+            $noScripts = preg_replace('/<(script|iframe|style)\b[^>]*>(.*?)<\/\1>/is', '', (string)$str);
+            return strip_tags(trim($noScripts));
+        };
+
+        $data['name'] = $sanitize($data['name']);
+        $data['address'] = $sanitize($data['address']);
+        $data['city'] = $sanitize($data['city']);
+        $data['note'] = isset($data['note']) ? $sanitize($data['note']) : null;
+        $data['phone'] = trim($data['phone']);
 
         // resolve the signed-in customer if a valid token was sent (optional)
         $customer = null;
@@ -45,7 +84,7 @@ class CheckoutController extends Controller
             $customer = null;
         }
 
-        $order = DB::transaction(function () use ($data, $customer) {
+        $order = DB::transaction(function () use ($data, $customer, $cleanEmail) {
                 $subtotal = 0;
                 $lines = [];
 
@@ -54,6 +93,9 @@ class CheckoutController extends Controller
                     $product = Product::where('slug', $row['id'])->lockForUpdate()->first();
                     if (! $product) {
                         abort(422, "One of the items is no longer available.");
+                    }
+                    if ($product->status === 'Out of stock') {
+                        abort(422, "“{$product->name}” is currently out of stock.");
                     }
                     if ($product->stock < $row['qty']) {
                         abort(422, "“{$product->name}” only has {$product->stock} left in stock.");
@@ -165,6 +207,9 @@ class CheckoutController extends Controller
 
                 return $order;
         });
+
+        // Set lock for 5 seconds to prevent accidental fast double submit
+        Cache::put($antiSpamLockKey, true, 5);
 
         return response()->json([
             'message' => 'Order placed successfully.',

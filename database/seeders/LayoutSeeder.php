@@ -42,7 +42,7 @@ class LayoutSeeder extends Seeder
             ['support', 'FAQ', '#'],
             ['contact', 'Sreemangal, Moulvibazar', ''],
             ['contact', 'chakunjo@gmail.com', ''],
-            ['contact', '+880 1XXX-XXXXXX', ''],
+            ['contact', '01313762119', ''],
         ];
         foreach ($footer as $i => [$col, $label, $target]) {
             FooterLink::firstOrCreate(
@@ -81,6 +81,13 @@ class LayoutSeeder extends Seeder
             'og_title' => 'Cha Kunjo — Premium Single-Origin Tea',
             'og_description' => 'Hand-plucked tea from Sreemangal, sealed within 48 hours of harvest.',
             'og_image' => '/images/slider/1.jpeg',
+            'site_name' => 'Cha Kunjo',
+            'logo' => '/images/slider/1.jpeg',
+            'locality' => 'Sreemangal, Bangladesh',
+            'business_phone' => '01313762119',
+            'business_email' => 'chakunjo@gmail.com',
+            'social_profiles' => 'https://facebook.com/chakunjo',
+            'google_site_verification' => '',
         ];
         foreach ($seo as $key => $value) {
             Setting::firstOrCreate(

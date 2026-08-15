@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,12 +14,24 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/command', function () {
-    Artisan::call('config:clear');
-    Artisan::call('cache:clear');
-    Artisan::call('config:cache');
-    Artisan::call('optimize');
-    return 'DONE';
-});
+    $lock = storage_path('app/.command-used');
+    $handle = @fopen($lock, 'x');
+    abort_if($handle === false, 404);
+    fclose($handle);
+
+    try {
+        Artisan::call('optimize:clear');
+        Artisan::call('optimize');
+    } catch (\Throwable $exception) {
+        @unlink($lock);
+        throw $exception;
+    }
+
+    return response()->json([
+        'ok' => true,
+        'message' => 'Laravel caches cleared and rebuilt. This one-time URL is now locked.',
+    ]);
+})->middleware('throttle:10,1');
 
 Route::get('/', function () {
     return redirect('/login');

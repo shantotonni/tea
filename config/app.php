@@ -54,6 +54,10 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // Absolute base for public media (product/section images). The storefront
+    // loads images straight from here. Set MEDIA_URL on the backend server.
+    'media_url' => env('MEDIA_URL', 'https://backend.chakunjo.com'),
+
     'asset_url' => env('ASSET_URL', null),
 
     /*
