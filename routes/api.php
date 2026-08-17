@@ -104,7 +104,9 @@ Route::middleware('auth:api')->group(function () {
     Route::apiResource('products', ProductController::class);
     Route::post('upload', function (\Illuminate\Http\Request $request) {
         $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg,webp,gif,svg|max:10240',
+            // 'file' (not 'image') so servers whose GD lacks webp support don't
+            // reject webp uploads — mimes still restricts to real image types.
+            'image' => 'required|file|mimes:jpeg,png,jpg,webp,gif,svg,avif|max:10240',
         ]);
 
         $file = $request->file('image');

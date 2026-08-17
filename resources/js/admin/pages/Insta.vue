@@ -4,8 +4,9 @@ import AppIcon from '../components/AppIcon.vue'
 import Skeleton from '../components/Skeleton.vue'
 import {
     fetchInstaShots, createInstaShot, updateInstaShot, deleteInstaShot,
-    fetchSettings, saveSettings,
+    fetchSettings, saveSettings, asset,
 } from '../data'
+import { uploadFile } from '../api'
 import { toast } from '../composables/useToast'
 
 const loading = ref(true)
@@ -37,6 +38,15 @@ const editingId = ref(null)
 const busy = ref(false)
 const fieldErrors = ref({})
 const form = reactive(blank())
+const uploading = ref(false)
+async function handleImageUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    uploading.value = true
+    try { form.image = await uploadFile(file); toast.success('Image uploaded.') }
+    catch (err) { toast.error('Upload failed. Image must be under 10MB.') }
+    finally { uploading.value = false; e.target.value = '' }
+}
 
 function openCreate() { editingId.value = null; fieldErrors.value = {}; Object.assign(form, blank(), { sort_order: shots.value.length }); showForm.value = true }
 function openEdit(s) { editingId.value = s.id; fieldErrors.value = {}; Object.assign(form, { image: s.image, caption: s.caption || '', likes: s.likes || 0, is_published: !!s.is_published, sort_order: s.sort_order || 0 }); showForm.value = true }
@@ -97,7 +107,7 @@ async function remove() {
                         <thead><tr><th style="width: 70px">Photo</th><th>Caption</th><th style="width: 90px">Likes</th><th>Live</th><th></th></tr></thead>
                         <tbody>
                             <tr v-for="s in shots" :key="s.id">
-                                <td><img :src="s.image" alt="" class="thumb" /></td>
+                                <td><img :src="asset(s.image)" alt="" class="thumb" /></td>
                                 <td>{{ s.caption }}</td>
                                 <td>♥ {{ s.likes }}</td>
                                 <td><button class="switch sm" :class="{ on: s.is_published }" @click="togglePublish(s)" /></td>
@@ -121,7 +131,18 @@ async function remove() {
                         <button class="modal-x" aria-label="Close" @click="closeForm"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
                     </header>
                     <div class="modal-body">
-                        <label class="field" :class="{ invalid: fieldErrors.image }"><span>Image path</span><input v-model="form.image" type="text" placeholder="/images/garden.jpg" /><em v-if="fieldErrors.image" class="field-msg">{{ fieldErrors.image[0] }}</em></label>
+                        <div class="upload-card">
+                            <label class="field" :class="{ invalid: fieldErrors.image }">
+                                <span>Post image</span>
+                                <div class="upload-row">
+                                    <label class="btn btn-primary file-btn"><span>{{ uploading ? '⏳ Uploading…' : '📁 Choose image' }}</span><input type="file" accept="image/*" @change="handleImageUpload" /></label>
+                                    <span class="or-text">or paste path:</span>
+                                    <input v-model="form.image" type="text" placeholder="/images/garden.jpg" />
+                                </div>
+                                <em v-if="fieldErrors.image" class="field-msg">{{ fieldErrors.image[0] }}</em>
+                            </label>
+                            <div v-if="form.image" class="img-preview"><img :src="asset(form.image)" alt="preview" /></div>
+                        </div>
                         <label class="field"><span>Caption</span><input v-model="form.caption" type="text" /></label>
                         <div class="form-grid">
                             <label class="field"><span>Likes</span><input v-model.number="form.likes" type="number" min="0" /></label>
@@ -158,6 +179,14 @@ async function remove() {
 </template>
 
 <style scoped>
+.upload-card { background: var(--cream, #f9f6f0); border: 1.5px dashed rgba(200, 162, 74, 0.4); border-radius: 12px; padding: 1rem 1.1rem; }
+.upload-row { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; margin-top: 0.4rem; }
+.file-btn { position: relative; overflow: hidden; cursor: pointer; }
+.file-btn input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.or-text { font-size: 0.8rem; color: var(--muted); }
+.upload-row input[type="text"] { flex: 1; min-width: 180px; }
+.img-preview { margin-top: 0.9rem; }
+.img-preview img { max-width: 300px; width: 100%; border-radius: 10px; border: 2px solid var(--gold, #c8a24a); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
 .blk { margin-bottom: 1.4rem; }
 .blk-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.1rem 1.4rem; border-bottom: 1px solid var(--line, #eee); }
 .blk-head h3 { margin: 0; font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem; }

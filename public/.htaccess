@@ -30,6 +30,13 @@
     AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript application/json image/svg+xml
 </IfModule>
 
+# Ensure modern image formats are served with the correct MIME type
+<IfModule mod_mime.c>
+    AddType image/webp .webp
+    AddType image/avif .avif
+    AddType image/svg+xml .svg
+</IfModule>
+
 # Expires & Long-Term Browser Caching
 <IfModule mod_expires.c>
     ExpiresActive On

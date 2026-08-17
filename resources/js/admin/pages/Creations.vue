@@ -4,8 +4,9 @@ import AppIcon from '../components/AppIcon.vue'
 import Skeleton from '../components/Skeleton.vue'
 import {
     fetchCreationTiles, createCreationTile, updateCreationTile, deleteCreationTile,
-    fetchSettings, saveSettings,
+    fetchSettings, saveSettings, asset,
 } from '../data'
+import { uploadFile } from '../api'
 import { toast } from '../composables/useToast'
 
 const loading = ref(true)
@@ -42,11 +43,20 @@ async function saveCopy() {
 }
 
 const blank = () => ({ image: '', label: '', meta: '', target: '', is_wide: false, is_published: true, sort_order: 0 })
+const uploading = ref(false)
 const showForm = ref(false)
 const editingId = ref(null)
 const busy = ref(false)
 const fieldErrors = ref({})
 const form = reactive(blank())
+async function handleImageUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    uploading.value = true
+    try { form.image = await uploadFile(file); toast.success('Image uploaded.') }
+    catch (err) { toast.error('Upload failed. Image must be under 10MB.') }
+    finally { uploading.value = false; e.target.value = '' }
+}
 
 function openCreate() {
     editingId.value = null; fieldErrors.value = {}
@@ -130,7 +140,7 @@ async function remove() {
                         <thead><tr><th style="width: 80px">Image</th><th>Label</th><th>Meta</th><th>Wide</th><th>Live</th><th></th></tr></thead>
                         <tbody>
                             <tr v-for="t in tiles" :key="t.id">
-                                <td><img :src="t.image" alt="" class="thumb" /></td>
+                                <td><img :src="asset(t.image)" alt="" class="thumb" /></td>
                                 <td><strong>{{ t.label }}</strong></td>
                                 <td><span style="color: var(--muted)">{{ t.meta }}</span></td>
                                 <td><span v-if="t.is_wide" class="tag-cta">Wide</span></td>
@@ -155,7 +165,18 @@ async function remove() {
                         <button class="modal-x" aria-label="Close" @click="closeForm"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
                     </header>
                     <div class="modal-body">
-                        <label class="field" :class="{ invalid: fieldErrors.image }"><span>Image path</span><input v-model="form.image" type="text" placeholder="/images/green.jpg" /><em v-if="fieldErrors.image" class="field-msg">{{ fieldErrors.image[0] }}</em></label>
+                        <div class="upload-card">
+                            <label class="field" :class="{ invalid: fieldErrors.image }">
+                                <span>Tile image</span>
+                                <div class="upload-row">
+                                    <label class="btn btn-primary file-btn"><span>{{ uploading ? '⏳ Uploading…' : '📁 Choose image' }}</span><input type="file" accept="image/*" @change="handleImageUpload" /></label>
+                                    <span class="or-text">or paste path:</span>
+                                    <input v-model="form.image" type="text" placeholder="/images/green.jpg" />
+                                </div>
+                                <em v-if="fieldErrors.image" class="field-msg">{{ fieldErrors.image[0] }}</em>
+                            </label>
+                            <div v-if="form.image" class="img-preview"><img :src="asset(form.image)" alt="preview" /></div>
+                        </div>
                         <label class="field" :class="{ invalid: fieldErrors.label }"><span>Label</span><input v-model="form.label" type="text" /><em v-if="fieldErrors.label" class="field-msg">{{ fieldErrors.label[0] }}</em></label>
                         <div class="form-grid">
                             <label class="field"><span>Meta</span><input v-model="form.meta" type="text" placeholder="Limited · 100g" /></label>
@@ -194,6 +215,14 @@ async function remove() {
 </template>
 
 <style scoped>
+.upload-card { background: var(--cream, #f9f6f0); border: 1.5px dashed rgba(200, 162, 74, 0.4); border-radius: 12px; padding: 1rem 1.1rem; }
+.upload-row { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; margin-top: 0.4rem; }
+.file-btn { position: relative; overflow: hidden; cursor: pointer; }
+.file-btn input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.or-text { font-size: 0.8rem; color: var(--muted); }
+.upload-row input[type="text"] { flex: 1; min-width: 180px; }
+.img-preview { margin-top: 0.9rem; }
+.img-preview img { max-width: 300px; width: 100%; border-radius: 10px; border: 2px solid var(--gold, #c8a24a); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
 .blk { margin-bottom: 1.4rem; }
 .blk-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1.1rem 1.4rem; border-bottom: 1px solid var(--line, #eee); }
 .blk-head h3 { margin: 0; font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem; }

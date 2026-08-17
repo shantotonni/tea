@@ -4,6 +4,7 @@ import AppIcon from '../components/AppIcon.vue'
 import StatCard from '../components/StatCard.vue'
 import Skeleton from '../components/Skeleton.vue'
 import { fetchPosts, createPost, updatePost, deletePost, asset } from '../data'
+import { uploadFile } from '../api'
 import { toast } from '../composables/useToast'
 
 const CATS = [
@@ -49,6 +50,16 @@ const editingId = ref(null)
 const busy = ref(false)
 const fieldErrors = ref({})
 const form = reactive(blank())
+
+const uploading = ref(false)
+async function handleImageUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    uploading.value = true
+    try { form.image = await uploadFile(file); toast.success('Image uploaded.') }
+    catch (err) { toast.error('Upload failed. Image must be under 10MB.') }
+    finally { uploading.value = false; e.target.value = '' }
+}
 
 function openCreate() {
     editingId.value = null
@@ -224,10 +235,20 @@ async function remove() {
                                     <option v-for="c in CATS" :key="c.id" :value="c.id">{{ c.label }}</option>
                                 </select>
                             </label>
-                            <label class="field">
-                                <span>Image path</span>
-                                <input v-model="form.image" type="text" placeholder="/images/garden.jpg" />
-                            </label>
+                            <div class="upload-card">
+                                <label class="field">
+                                    <span>Cover image</span>
+                                    <div class="upload-row">
+                                        <label class="btn btn-primary file-btn">
+                                            <span>{{ uploading ? '⏳ Uploading…' : '📁 Choose image' }}</span>
+                                            <input type="file" accept="image/*" @change="handleImageUpload" />
+                                        </label>
+                                        <span class="or-text">or paste path:</span>
+                                        <input v-model="form.image" type="text" placeholder="/images/garden.jpg" />
+                                    </div>
+                                </label>
+                                <div v-if="form.image" class="img-preview"><img :src="asset(form.image)" alt="preview" /></div>
+                            </div>
                             <label class="field">
                                 <span>Author</span>
                                 <input v-model="form.author" type="text" />
@@ -282,3 +303,14 @@ async function remove() {
         </Transition>
     </div>
 </template>
+
+<style scoped>
+.upload-card { background: var(--cream, #f9f6f0); border: 1.5px dashed rgba(200, 162, 74, 0.4); border-radius: 12px; padding: 1rem 1.1rem; }
+.upload-row { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; margin-top: 0.4rem; }
+.file-btn { position: relative; overflow: hidden; cursor: pointer; }
+.file-btn input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.or-text { font-size: 0.8rem; color: var(--muted); }
+.upload-row input[type="text"] { flex: 1; min-width: 180px; }
+.img-preview { margin-top: 0.9rem; }
+.img-preview img { max-width: 300px; width: 100%; border-radius: 10px; border: 2px solid var(--gold, #c8a24a); box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
+</style>
